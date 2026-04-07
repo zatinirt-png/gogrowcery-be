@@ -4,33 +4,21 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
-Route::get('/health', function () {
-    $status = [
-        'status' => 'ok',
-        'timestamp' => now()->toISOString(),
-        'services' => [
-            'database' => 'unknown',
-            'redis' => 'unknown',
-        ],
-    ];
+use App\Http\Controllers\Api\AuthController;
 
-    // Cek koneksi database
-    try {
-        DB::connection()->getPdo();
-        $status['services']['database'] = 'connected';
-    } catch (\Exception $e) {
-        $status['services']['database'] = 'error: ' . $e->getMessage();
-        $status['status'] = 'degraded';
-    }
+// Auth routes
+Route::prefix('auth')->group(function () {
 
-    // Cek koneksi Redis
-    try {
-        Cache::store('redis')->put('health_check', true, 10);
-        $status['services']['redis'] = 'connected';
-    } catch (\Exception $e) {
-        $status['services']['redis'] = 'error: ' . $e->getMessage();
-        $status['status'] = 'degraded';
-    }
+    // Register
+    Route::post('/register/buyer',    [AuthController::class, 'registerBuyer']);
+    Route::post('/register/supplier', [AuthController::class, 'registerSupplier']);
 
-    return response()->json($status);
+    // Login
+    Route::post('/login', [AuthController::class, 'login']);
+
+    // Protected routes
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me',      [AuthController::class, 'me']);
+    });
 });
