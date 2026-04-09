@@ -10,13 +10,14 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         User::firstOrCreate(
-            ['email' => 'admin@gogrowcery.com'],
+            ['username' => 'superadmin'],
             [
-                'name'      => 'Super Admin',
-                'password'  => 'admin123456',
-                'role'      => 'admin',
+                'name' => 'Super Admin',
+                'email' => 'admin@gogrowcery.com',
+                'password' => 'admin123456',
+                'role' => 'admin',
                 'is_active' => true,
-            ]
+            ],
         );
     }
 }

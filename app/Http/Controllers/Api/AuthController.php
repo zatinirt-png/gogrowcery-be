@@ -9,8 +9,8 @@ use App\Http\Requests\Auth\RegisterSupplierRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -22,38 +22,45 @@ class AuthController extends Controller
 
         try {
             $user = User::create([
-                'name'      => $request->name,
-                'email'     => $request->email,
-                'password'  => $request->password,
-                'role'      => 'buyer',
+                'name' => $request->name,
+                'username' => $request->username,
+                'email' => $request->email,
+                'password' => $request->password,
+                'user_type' => 'buyer',
                 'is_active' => true,
             ]);
 
             $user->buyerProfile()->create([
                 'full_name' => $request->full_name,
-                'phone'     => $request->phone,
+                'phone' => $request->phone,
             ]);
 
             $token = $user->createToken('buyer-token')->plainTextToken;
 
             DB::commit();
 
-            return response()->json([
-                'message' => 'Registrasi berhasil.',
-                'token'   => $token,
-                'user'    => [
-                    'id'    => $user->id,
-                    'name'  => $user->name,
-                    'email' => $user->email,
-                    'role'  => $user->role,
+            return response()->json(
+                [
+                    'message' => 'Registrasi berhasil.',
+                    'token' => $token,
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'username' => $user->username,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                    ],
                 ],
-            ], 201);
-
+                201,
+            );
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 500);
+            return response()->json(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                500,
+            );
         }
     }
 
@@ -64,62 +71,73 @@ class AuthController extends Controller
 
         try {
             $user = User::create([
-                'name'      => $request->name,
-                'email'     => $request->email,
-                'password'  => $request->password,
-                'role'      => 'supplier',
+                'name' => $request->name,
+                'username' => $request->username,
+                'email' => $request->email,
+                'password' => $request->password,
+                'role' => 'supplier',
                 'is_active' => false, // belum aktif sampai di-approve
             ]);
 
             $user->supplierProfile()->create([
-                'store_name'          => $request->store_name,
-                'phone'               => $request->phone,
-                'npwp'                => $request->npwp,
-                'address'             => $request->address,
-                'approval_status'     => 'pending',
+                'store_name' => $request->store_name,
+                'phone' => $request->phone,
+                'npwp' => $request->npwp,
+                'address' => $request->address,
+                'approval_status' => 'pending',
                 'registered_by_admin' => false,
             ]);
 
             DB::commit();
 
-            return response()->json([
-                'message' => 'Registrasi supplier berhasil. '
-                           . 'Akun kamu sedang menunggu persetujuan admin.',
-            ], 201);
-
+            return response()->json(
+                [
+                    'message' => 'Registrasi supplier berhasil. ' . 'Akun kamu sedang menunggu persetujuan admin.',
+                ],
+                201,
+            );
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'message' => 'Registrasi gagal. Silakan coba lagi.',
-            ], 500);
+            return response()->json(
+                [
+                    'message' => 'Registrasi gagal. Silakan coba lagi.',
+                ],
+                500,
+            );
         }
     }
 
     // Login (semua role)
     public function login(LoginRequest $request): JsonResponse
     {
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        // Cari user berdasarkan username
+        $user = User::where('username', $request->username)->first();
+
+        // Username tidak ditemukan atau password salah
+        if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['Email atau password salah.'],
+                'username' => ['Username atau password salah.'],
             ]);
         }
 
-        $user = Auth::user();
-
         // Cek apakah akun aktif
         if (!$user->is_active) {
-            Auth::logout();
-            return response()->json([
-                'message' => 'Akun kamu belum aktif atau sedang menunggu persetujuan admin.',
-            ], 403);
+            return response()->json(
+                [
+                    'message' => 'Akun kamu belum aktif atau sedang menunggu persetujuan admin.',
+                ],
+                403,
+            );
         }
 
         // Cek khusus supplier: harus sudah approved
         if ($user->isSupplier() && !$user->isApprovedSupplier()) {
-            Auth::logout();
-            return response()->json([
-                'message' => 'Akun supplier kamu belum disetujui admin.',
-            ], 403);
+            return response()->json(
+                [
+                    'message' => 'Akun supplier kamu belum disetujui admin.',
+                ],
+                403,
+            );
         }
 
         // Hapus token lama, buat yang baru
@@ -128,12 +146,13 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login berhasil.',
-            'token'   => $token,
-            'user'    => [
-                'id'    => $user->id,
-                'name'  => $user->name,
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
                 'email' => $user->email,
-                'role'  => $user->role,
+                'role' => $user->role,
             ],
         ]);
     }
@@ -151,8 +170,14 @@ class AuthController extends Controller
     // Get current user
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load(
-            $request->user()->isSupplier() ? 'supplierProfile' : 'buyerProfile'
+        $user = $request->user();
+
+        $user->load(
+            match ($user->user_type) {
+                'supplier' => 'supplierProfile',
+                'buyer' => 'buyerProfile',
+                default => [],
+            },
         );
 
         return response()->json(['user' => $user]);
