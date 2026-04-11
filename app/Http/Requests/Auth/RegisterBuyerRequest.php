@@ -21,7 +21,6 @@ class RegisterBuyerRequest extends FormRequest
             'username'  => ['required', 'string', 'max:100', 'unique:users,username'],
             'email'     => ['nullable', 'email', 'unique:users,email'],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
-            'full_name' => ['nullable', 'string', 'max:255'],
             'phone'     => ['nullable', 'string', 'max:20'],
         ];
     }
