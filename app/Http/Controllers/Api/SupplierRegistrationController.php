@@ -104,7 +104,8 @@ class SupplierRegistrationController extends Controller
 
             return response()->json([
                 'message' => 'Registrasi gagal. Silakan coba lagi.',
-                'error'   => config('app.debug') ? $e->getMessage() : null,
+                // 'error'   => config('app.debug') ? $e->getMessage() : null,
+                'error' => $e->getMessage()
             ], 500);
         }
     }
