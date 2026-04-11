@@ -6,7 +6,7 @@ use App\Models\SupplierLand;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['user_id', 'nama_lengkap', 'no_ktp', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'pendidikan', 'status_perkawinan', 'no_hp', 'email', 'alamat_domisili', 'desa', 'kecamatan', 'kabupaten', 'kontak_darurat', 'bahasa_komunikasi', 'approval_status', 'survey_status', 'approved_by', 'approved_at', 'rejection_reason', 'survey_notes', 'registered_by_admin'])]
+#[Fillable(['user_id', 'nama_lengkap', 'no_ktp', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'pendidikan', 'status_perkawinan', 'no_hp', 'alamat_domisili', 'desa', 'kecamatan', 'kabupaten', 'kontak_darurat', 'bahasa_komunikasi', 'approval_status', 'survey_status', 'approved_by', 'approved_at', 'rejection_reason', 'survey_notes', 'registered_by_admin'])]
 class SupplierProfile extends Model
 {
     protected function casts(): array

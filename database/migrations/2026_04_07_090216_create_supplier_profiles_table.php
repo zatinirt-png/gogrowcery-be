@@ -22,7 +22,6 @@ return new class extends Migration
         $table->string('pendidikan', 100)->nullable();
         $table->enum('status_perkawinan', ['belum_kawin', 'kawin', 'janda_duda']);
         $table->string('no_hp', 20)->unique();
-        $table->string('email')->nullable();
         $table->text('alamat_domisili');
         $table->string('desa', 100);
         $table->string('kecamatan', 100);

@@ -1,17 +1,16 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\SupplierRegistrationController;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 
 // Auth routes
 Route::prefix('auth')->group(function () {
-
     // Register
-    Route::post('/register/buyer',    [AuthController::class, 'registerBuyer']);
-    Route::post('/register/supplier', [AuthController::class, 'registerSupplier']);
+    Route::post('/register/buyer', [AuthController::class, 'registerBuyer']);
+    Route::post('/register/supplier', [SupplierRegistrationController::class, 'register']);
 
     // Login
     Route::post('/login', [AuthController::class, 'login']);
@@ -19,6 +18,6 @@ Route::prefix('auth')->group(function () {
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/me',      [AuthController::class, 'me']);
+        Route::get('/me', [AuthController::class, 'me']);
     });
 });

@@ -26,7 +26,7 @@ class AuthController extends Controller
                 'username' => $request->username,
                 'email' => $request->email,
                 'password' => $request->password,
-                'user_type' => 'buyer',
+                'role' => 'buyer',
                 'is_active' => true,
             ]);
 
@@ -58,49 +58,6 @@ class AuthController extends Controller
             return response()->json(
                 [
                     'message' => $e->getMessage(),
-                ],
-                500,
-            );
-        }
-    }
-
-    // Register Supplier (self-register, status: pending)
-    public function registerSupplier(RegisterSupplierRequest $request): JsonResponse
-    {
-        DB::beginTransaction();
-
-        try {
-            $user = User::create([
-                'name' => $request->name,
-                'username' => $request->username,
-                'email' => $request->email,
-                'password' => $request->password,
-                'role' => 'supplier',
-                'is_active' => false, // belum aktif sampai di-approve
-            ]);
-
-            $user->supplierProfile()->create([
-                'store_name' => $request->store_name,
-                'phone' => $request->phone,
-                'npwp' => $request->npwp,
-                'address' => $request->address,
-                'approval_status' => 'pending',
-                'registered_by_admin' => false,
-            ]);
-
-            DB::commit();
-
-            return response()->json(
-                [
-                    'message' => 'Registrasi supplier berhasil. ' . 'Akun kamu sedang menunggu persetujuan admin.',
-                ],
-                201,
-            );
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(
-                [
-                    'message' => 'Registrasi gagal. Silakan coba lagi.',
                 ],
                 500,
             );
