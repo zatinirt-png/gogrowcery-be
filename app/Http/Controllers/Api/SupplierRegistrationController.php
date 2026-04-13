@@ -21,7 +21,7 @@ class SupplierRegistrationController extends Controller
                 'username' => $request->username,
                 'email' => $request->email,
                 'password' => $request->password,
-                'user_type' => 'supplier',
+                'role' => 'supplier',
                 'is_active' => false, // aktif setelah approved
             ]);
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\SupplierApprovalController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SupplierRegistrationController;
 use Illuminate\Support\Facades\Cache;
@@ -21,3 +22,14 @@ Route::prefix('auth')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
     });
 });
+
+Route::prefix('admin')
+    ->middleware(['auth:sanctum', 'admin'])
+    ->group(function () {
+
+        // Supplier approval
+        Route::get('/suppliers/pending',          [SupplierApprovalController::class, 'index']);
+        Route::get('/suppliers/{supplierProfile}', [SupplierApprovalController::class, 'show']);
+        Route::patch('/suppliers/{supplierProfile}/approve', [SupplierApprovalController::class, 'approve']);
+        Route::patch('/suppliers/{supplierProfile}/reject',  [SupplierApprovalController::class, 'reject']);
+    });
