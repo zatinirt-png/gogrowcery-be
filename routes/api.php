@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\SupplierApprovalController;
+use App\Http\Controllers\Api\Admin\SupplierCreateController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SupplierRegistrationController;
 use Illuminate\Support\Facades\Cache;
@@ -26,6 +27,9 @@ Route::prefix('auth')->group(function () {
 Route::prefix('admin')
     ->middleware(['auth:sanctum', 'admin'])
     ->group(function () {
+
+     // Supplier create by admin
+        Route::post('/suppliers', [SupplierCreateController::class, 'store']);
 
         // Supplier approval
         Route::get('/suppliers/pending',          [SupplierApprovalController::class, 'index']);
