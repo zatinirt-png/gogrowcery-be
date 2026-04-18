@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bounty;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class BountyService
@@ -24,6 +25,9 @@ class BountyService
 
             $bounty->items()->createMany($data['items']);
 
+            // Cache belum perlu di-invalidate saat create
+            // karena status masih draft, belum masuk published list
+
             return $bounty->load('items', 'createdBy');
         });
     }
@@ -39,10 +43,14 @@ class BountyService
                 'updated_by'  => $admin->id,
             ]);
 
-            // Sync items jika dikirim
             if (isset($data['items'])) {
                 $bounty->items()->delete();
                 $bounty->items()->createMany($data['items']);
+            }
+
+            // Invalidate cache kalau bounty ini published
+            if ($bounty->isPublished()) {
+                $this->invalidateCache($bounty->id);
             }
 
             return $bounty->load('items', 'createdBy', 'updatedBy');
@@ -63,12 +71,14 @@ class BountyService
 
         $bounty->update(array_merge(['status' => $status], $extra));
 
+        // Invalidate cache — status berubah selalu affect published list
+        $this->invalidateCache($bounty->id);
+
         return $bounty->fresh('items');
     }
 
     public function extendDeadline(Bounty $bounty, string $newDeadline, User $admin): Bounty
     {
-        // Validasi: harus lebih besar dari deadline aktif
         $activeDeadline = $bounty->extended_deadline_at ?? $bounty->deadline_at;
 
         if (strtotime($newDeadline) <= strtotime($activeDeadline)) {
@@ -84,6 +94,18 @@ class BountyService
             'updated_by'           => $admin->id,
         ]);
 
+        // Invalidate cache kalau bounty ini published
+        if ($bounty->isPublished()) {
+            $this->invalidateCache($bounty->id);
+        }
+
         return $bounty->fresh('items');
+    }
+
+    // Helper — invalidate semua cache terkait bounty
+    private function invalidateCache(int $bountyId): void
+    {
+        Cache::forget('bounties.published');
+        Cache::forget("bounties.{$bountyId}");
     }
 }

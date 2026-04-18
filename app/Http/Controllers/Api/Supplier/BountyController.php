@@ -5,16 +5,19 @@ namespace App\Http\Controllers\Api\Supplier;
 use App\Http\Controllers\Controller;
 use App\Models\Bounty;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class BountyController extends Controller
 {
-    // Supplier hanya bisa lihat bounty yang published
     public function index(): JsonResponse
     {
-        $bounties = Bounty::with('items')
-            ->where('status', 'published')
-            ->latest('published_at')
-            ->paginate(15);
+        $bounties = Cache::remember('bounties.published', 300, function () {
+            return Bounty::with('items')
+                ->where('status', 'published')
+                ->latest('published_at')
+                ->paginate(15)
+                ->toArray(); // ← simpan sebagai array
+        });
 
         return response()->json($bounties);
     }
@@ -27,8 +30,10 @@ class BountyController extends Controller
             ], 404);
         }
 
-        $bounty->load('items');
+        $data = Cache::remember("bounties.{$bounty->id}", 300, function () use ($bounty) {
+            return $bounty->load('items')->toArray(); // ← simpan sebagai array
+        });
 
-        return response()->json(['data' => $bounty]);
+        return response()->json(['data' => $data]);
     }
 }
