@@ -6,16 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\SupplierProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SupplierApprovalController extends Controller
 {
-    // Daftar supplier pending
     public function index(): JsonResponse
     {
-        $suppliers = SupplierProfile::with(['user', 'lands', 'payoutAccount'])
-            ->where('approval_status', 'pending')
-            ->latest()
-            ->get();
+        $suppliers = Cache::remember('suppliers.pending', 300, function () {
+            return SupplierProfile::with(['user', 'lands', 'payoutAccount'])
+                ->where('approval_status', 'pending')
+                ->latest()
+                ->get()
+                ->toArray();
+        });
 
         return response()->json([
             'message' => 'Daftar supplier pending.',
@@ -23,18 +26,18 @@ class SupplierApprovalController extends Controller
         ]);
     }
 
-    // Detail satu supplier
     public function show(SupplierProfile $supplierProfile): JsonResponse
     {
-        $supplierProfile->load(['user', 'lands', 'payoutAccount']);
+        $data = Cache::remember("suppliers.{$supplierProfile->id}", 300, function () use ($supplierProfile) {
+            return $supplierProfile->load(['user', 'lands', 'payoutAccount'])->toArray();
+        });
 
         return response()->json([
             'message' => 'Detail supplier.',
-            'data'    => $supplierProfile,
+            'data'    => $data,
         ]);
     }
 
-    // Approve supplier
     public function approve(Request $request, SupplierProfile $supplierProfile): JsonResponse
     {
         if ($supplierProfile->isApproved()) {
@@ -44,16 +47,18 @@ class SupplierApprovalController extends Controller
         }
 
         $supplierProfile->update([
-            'approval_status' => 'approved',
-            'approved_by'     => $request->user()->id,
-            'approved_at'     => now(),
+            'approval_status'  => 'approved',
+            'approved_by'      => $request->user()->id,
+            'approved_at'      => now(),
             'rejection_reason' => null,
         ]);
 
-        // Aktifkan akun user-nya
         $supplierProfile->user->update([
             'is_active' => true,
         ]);
+
+        // Invalidate cache
+        $this->invalidateCache($supplierProfile->id);
 
         return response()->json([
             'message' => 'Supplier berhasil diapprove.',
@@ -67,7 +72,6 @@ class SupplierApprovalController extends Controller
         ]);
     }
 
-    // Reject supplier
     public function reject(Request $request, SupplierProfile $supplierProfile): JsonResponse
     {
         $request->validate([
@@ -87,10 +91,12 @@ class SupplierApprovalController extends Controller
             'rejection_reason' => $request->rejection_reason,
         ]);
 
-        // Pastikan akun tetap tidak aktif
         $supplierProfile->user->update([
             'is_active' => false,
         ]);
+
+        // Invalidate cache
+        $this->invalidateCache($supplierProfile->id);
 
         return response()->json([
             'message' => 'Supplier berhasil direject.',
@@ -101,5 +107,11 @@ class SupplierApprovalController extends Controller
                 'rejection_reason' => $supplierProfile->rejection_reason,
             ],
         ]);
+    }
+
+    private function invalidateCache(int $supplierProfileId): void
+    {
+        Cache::forget('suppliers.pending');
+        Cache::forget("suppliers.{$supplierProfileId}");
     }
 }

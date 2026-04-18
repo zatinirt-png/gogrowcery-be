@@ -10,6 +10,7 @@ use App\Http\Requests\Bounty\UpdateBountyStatusRequest;
 use App\Models\Bounty;
 use App\Services\BountyService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class BountyController extends Controller
 {
@@ -17,9 +18,12 @@ class BountyController extends Controller
 
     public function index(): JsonResponse
     {
-        $bounties = Bounty::with(['items', 'createdBy'])
-            ->latest()
-            ->paginate(15);
+        $bounties = Cache::remember('bounties.admin.all', 300, function () {
+            return Bounty::with(['items', 'createdBy'])
+                ->latest()
+                ->paginate(15)
+                ->toArray();
+        });
 
         return response()->json($bounties);
     }
@@ -31,6 +35,9 @@ class BountyController extends Controller
             $request->user()
         );
 
+        // Invalidate admin list cache
+        Cache::forget('bounties.admin.all');
+
         return response()->json([
             'message' => 'Bounty berhasil dibuat.',
             'data'    => $bounty,
@@ -39,9 +46,11 @@ class BountyController extends Controller
 
     public function show(Bounty $bounty): JsonResponse
     {
-        $bounty->load(['items', 'createdBy', 'updatedBy']);
+        $data = Cache::remember("bounties.admin.{$bounty->id}", 300, function () use ($bounty) {
+            return $bounty->load(['items', 'createdBy', 'updatedBy'])->toArray();
+        });
 
-        return response()->json(['data' => $bounty]);
+        return response()->json(['data' => $data]);
     }
 
     public function update(UpdateBountyRequest $request, Bounty $bounty): JsonResponse
@@ -51,6 +60,10 @@ class BountyController extends Controller
             $request->validated(),
             $request->user()
         );
+
+        // Invalidate cache
+        Cache::forget('bounties.admin.all');
+        Cache::forget("bounties.admin.{$bounty->id}");
 
         return response()->json([
             'message' => 'Bounty berhasil diupdate.',
@@ -66,6 +79,10 @@ class BountyController extends Controller
             $request->user()
         );
 
+        // Invalidate semua cache terkait
+        Cache::forget('bounties.admin.all');
+        Cache::forget("bounties.admin.{$bounty->id}");
+
         return response()->json([
             'message' => 'Status bounty berhasil diupdate.',
             'data'    => $bounty,
@@ -80,6 +97,10 @@ class BountyController extends Controller
                 $request->new_deadline,
                 $request->user()
             );
+
+            // Invalidate cache
+            Cache::forget('bounties.admin.all');
+            Cache::forget("bounties.admin.{$bounty->id}");
 
             return response()->json([
                 'message' => 'Deadline bounty berhasil diperpanjang.',
