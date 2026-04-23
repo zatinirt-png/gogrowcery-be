@@ -42,7 +42,6 @@ class SupplierRegistrationController extends Controller
                 'tanggal_lahir' => $request->tanggal_lahir,
                 'jenis_kelamin' => $request->jenis_kelamin,
                 'pendidikan' => $request->pendidikan,
-                'status_perkawinan' => $request->status_perkawinan,
                 'no_hp' => $request->no_hp,
                 'email' => $request->email,
                 'alamat_domisili' => $request->alamat_domisili,
@@ -50,7 +49,6 @@ class SupplierRegistrationController extends Controller
                 'kecamatan' => $request->kecamatan,
                 'kabupaten' => $request->kabupaten,
                 'kontak_darurat' => $request->kontak_darurat,
-                'bahasa_komunikasi' => $request->bahasa_komunikasi ?? [],
                 'npwp_document_path' => $npwpPath,
                 'approval_status' => 'pending',
                 'survey_status' => 'belum_survey',
@@ -61,7 +59,6 @@ class SupplierRegistrationController extends Controller
             $landsData = collect($request->lands)
                 ->map(
                     fn($land) => [
-                        'nama_lahan' => $land['nama_lahan'],
                         'nama_pemilik' => $land['nama_pemilik'],
                         'no_hp' => $land['no_hp'],
                         'alamat_lahan' => $land['alamat_lahan'],
