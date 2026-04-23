@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterSupplierRequest;
 use App\Models\User;
+use App\Services\DocumentUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class SupplierRegistrationController extends Controller
 {
+    public function __construct(private DocumentUploadService $documentUploadService) {}
+
     public function register(RegisterSupplierRequest $request): JsonResponse
     {
         DB::beginTransaction();
@@ -22,13 +25,19 @@ class SupplierRegistrationController extends Controller
                 'email' => $request->email,
                 'password' => $request->password,
                 'role' => 'supplier',
-                'is_active' => false, // aktif setelah approved
+                'is_active' => false,
             ]);
 
-            // 2. Buat supplier profile
+            // 2. Upload dokumen ke R2
+            $ktpPath = $this->documentUploadService->uploadKtp($request->file('ktp_document'), $user->username);
+
+            $npwpPath = $request->hasFile('npwp_document') ? $this->documentUploadService->uploadNpwp($request->file('npwp_document'), $user->username) : null;
+
+            // 3. Buat supplier profile
             $profile = $user->supplierProfile()->create([
                 'nama_lengkap' => $request->nama_lengkap,
                 'no_ktp' => $request->no_ktp,
+                'ktp_document_path' => $ktpPath,
                 'tempat_lahir' => $request->tempat_lahir,
                 'tanggal_lahir' => $request->tanggal_lahir,
                 'jenis_kelamin' => $request->jenis_kelamin,
@@ -42,15 +51,16 @@ class SupplierRegistrationController extends Controller
                 'kabupaten' => $request->kabupaten,
                 'kontak_darurat' => $request->kontak_darurat,
                 'bahasa_komunikasi' => $request->bahasa_komunikasi ?? [],
+                'npwp_document_path' => $npwpPath,
                 'approval_status' => 'pending',
                 'survey_status' => 'belum_survey',
                 'registered_by_admin' => false,
             ]);
 
-            // 3. Buat lands (minimal 1, sudah divalidasi)
+            // 4. Buat lands
             $landsData = collect($request->lands)
                 ->map(
-                    fn ($land) => [
+                    fn($land) => [
                         'nama_lahan' => $land['nama_lahan'],
                         'nama_pemilik' => $land['nama_pemilik'],
                         'no_hp' => $land['no_hp'],
@@ -74,7 +84,7 @@ class SupplierRegistrationController extends Controller
 
             $profile->lands()->createMany($landsData);
 
-            // 4. Buat payout account
+            // 5. Buat payout account
             $payout = $request->payout;
             $profile->payoutAccount()->create([
                 'payout_method' => $payout['payout_method'],
@@ -92,12 +102,14 @@ class SupplierRegistrationController extends Controller
 
             return response()->json(
                 [
-                    'message' => 'Registrasi supplier berhasil. '.'Akun kamu sedang menunggu persetujuan admin.',
+                    'message' => 'Registrasi supplier berhasil. ' . 'Akun kamu sedang menunggu persetujuan admin.',
                     'data' => [
                         'username' => $user->username,
                         'nama_lengkap' => $profile->nama_lengkap,
                         'approval_status' => $profile->approval_status,
                         'jumlah_lahan' => count($request->lands),
+                        'has_ktp' => true,
+                        'has_npwp' => !is_null($npwpPath),
                     ],
                 ],
                 201,
@@ -105,10 +117,18 @@ class SupplierRegistrationController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            // Hapus file yang sudah terupload kalau transaksi DB gagal
+            if (isset($ktpPath)) {
+                $this->documentUploadService->delete($ktpPath);
+            }
+            if (isset($npwpPath)) {
+                $this->documentUploadService->delete($npwpPath);
+            }
+
             return response()->json(
                 [
                     'message' => 'Registrasi gagal. Silakan coba lagi.',
-                    'error'   => config('app.debug') ? $e->getMessage() : null,
+                    'error' => config('app.debug') ? $e->getMessage() : null,
                 ],
                 500,
             );

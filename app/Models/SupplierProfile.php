@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['user_id', 'nama_lengkap', 'no_ktp', 'ktp_document_path', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'pendidikan', 'status_perkawinan', 'no_hp', 'email', 'alamat_domisili', 'desa', 'kecamatan', 'kabupaten', 'kontak_darurat', 'bahasa_komunikasi', 'npwp_document_path', 'approval_status', 'survey_status', 'approved_by', 'approved_at', 'rejection_reason', 'survey_notes', 'registered_by_admin'])]
+#[Fillable(['user_id', 'nama_lengkap', 'no_ktp', 'ktp_document_path', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'pendidikan', 'status_perkawinan', 'no_hp', 'alamat_domisili', 'desa', 'kecamatan', 'kabupaten', 'kontak_darurat', 'bahasa_komunikasi', 'npwp_document_path', 'approval_status', 'survey_status', 'approved_by', 'approved_at', 'rejection_reason', 'survey_notes', 'registered_by_admin'])]
 class SupplierProfile extends Model
 {
     protected function casts(): array
