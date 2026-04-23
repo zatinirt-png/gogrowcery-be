@@ -13,7 +13,6 @@ return new class extends Migration {
         Schema::create('supplier_lands', function (Blueprint $table) {
             $table->id();
             $table->foreignId('supplier_profile_id')->constrained()->cascadeOnDelete();
-            $table->string('nama_lahan');
             $table->string('nama_pemilik');
             $table->string('no_hp', 20);
             $table->text('alamat_lahan');

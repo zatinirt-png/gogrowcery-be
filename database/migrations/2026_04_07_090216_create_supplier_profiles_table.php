@@ -20,14 +20,12 @@ return new class extends Migration
         $table->date('tanggal_lahir');
         $table->enum('jenis_kelamin', ['laki_laki', 'perempuan']);
         $table->string('pendidikan', 100)->nullable();
-        $table->enum('status_perkawinan', ['belum_kawin', 'kawin', 'janda_duda']);
         $table->string('no_hp', 20)->unique();
         $table->text('alamat_domisili');
         $table->string('desa', 100);
         $table->string('kecamatan', 100);
         $table->string('kabupaten', 100);
         $table->string('kontak_darurat')->nullable();
-        $table->json('bahasa_komunikasi')->nullable();
         $table->enum('approval_status', ['pending', 'approved', 'rejected'])
               ->default('pending');
         $table->enum('survey_status', ['belum_survey', 'dijadwalkan', 'sudah_survey'])
