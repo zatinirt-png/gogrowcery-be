@@ -31,6 +31,7 @@ Route::prefix('admin')
         Route::post('/suppliers', [SupplierCreateController::class, 'store']);
 
         // Supplier approval
+        Route::get('/suppliers', [SupplierApprovalController::class, 'all']);
         Route::get('/suppliers/pending', [SupplierApprovalController::class, 'index']);
         Route::get('/suppliers/{supplierProfile}', [SupplierApprovalController::class, 'show']);
         Route::get('/suppliers/{supplierProfile}/documents/{type}', [SupplierApprovalController::class, 'downloadDocument'])->name('admin.suppliers.documents');
