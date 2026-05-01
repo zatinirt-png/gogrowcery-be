@@ -13,14 +13,14 @@ class BountyService
     {
         return DB::transaction(function () use ($data, $admin) {
             $bounty = Bounty::create([
-                'code'                 => Bounty::generateCode(),
-                'client_name'          => $data['client_name'],
-                'title'                => $data['title'],
-                'description'          => $data['description'] ?? null,
-                'deadline_at'          => $data['deadline_at'],
+                'code' => Bounty::generateCode(),
+                'client_name' => $data['client_name'],
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'deadline_at' => $data['deadline_at'],
                 'original_deadline_at' => $data['deadline_at'],
-                'status'               => 'draft',
-                'created_by'           => $admin->id,
+                'status' => 'draft',
+                'created_by' => $admin->id,
             ]);
 
             $bounty->items()->createMany($data['items']);
@@ -37,10 +37,10 @@ class BountyService
         return DB::transaction(function () use ($bounty, $data, $admin) {
             $bounty->update([
                 'client_name' => $data['client_name'] ?? $bounty->client_name,
-                'title'       => $data['title'] ?? $bounty->title,
+                'title' => $data['title'] ?? $bounty->title,
                 'description' => $data['description'] ?? $bounty->description,
                 'deadline_at' => $data['deadline_at'] ?? $bounty->deadline_at,
-                'updated_by'  => $admin->id,
+                'updated_by' => $admin->id,
             ]);
 
             if (isset($data['items'])) {
@@ -82,16 +82,13 @@ class BountyService
         $activeDeadline = $bounty->extended_deadline_at ?? $bounty->deadline_at;
 
         if (strtotime($newDeadline) <= strtotime($activeDeadline)) {
-            throw new \InvalidArgumentException(
-                'Deadline baru harus lebih besar dari deadline aktif saat ini (' .
-                $activeDeadline->format('Y-m-d H:i') . ').'
-            );
+            throw new \InvalidArgumentException('Deadline baru harus lebih besar dari deadline aktif saat ini (' . $activeDeadline->format('Y-m-d H:i') . ').');
         }
 
         $bounty->update([
-            'deadline_at'          => $newDeadline,
+            'deadline_at' => $newDeadline,
             'extended_deadline_at' => $newDeadline,
-            'updated_by'           => $admin->id,
+            'updated_by' => $admin->id,
         ]);
 
         // Invalidate cache kalau bounty ini published
@@ -100,6 +97,47 @@ class BountyService
         }
 
         return $bounty->fresh('items');
+    }
+
+    public function getBiddingProgress(Bounty $bounty): array
+    {
+        $totalItems = $bounty->items->count();
+        $totalTargetQty = $bounty->items->sum('target_quantity');
+
+        $bids = $bounty
+            ->bids()
+            ->with('items')
+            ->whereIn('status', ['submitted', 'revised'])
+            ->get();
+
+        $totalBidders = $bids->count();
+
+        // Per item — berapa supplier yang bid + total estimasi kuantitas
+        $itemProgress = $bounty->items->map(function ($item) use ($bids) {
+            $bidItemsForThisItem = $bids->flatMap->items->where('bounty_item_id', $item->id);
+
+            return [
+                'bounty_item_id' => $item->id,
+                'item_name' => $item->item_name,
+                'target_quantity' => $item->target_quantity,
+                'unit' => $item->unit,
+                'total_bidders' => $bidItemsForThisItem->count(),
+                'total_estimasi_qty' => $bidItemsForThisItem->sum('estimasi_kuantitas'),
+                'fulfillment_pct' => $item->target_quantity > 0 ? round(($bidItemsForThisItem->sum('estimasi_kuantitas') / $item->target_quantity) * 100, 1) : 0,
+                'grades_available' => $bidItemsForThisItem->pluck('grade')->unique()->values(),
+                'price_range' => [
+                    'min' => $bidItemsForThisItem->min('estimasi_harga'),
+                    'max' => $bidItemsForThisItem->max('estimasi_harga'),
+                    'avg' => $bidItemsForThisItem->count() > 0 ? round($bidItemsForThisItem->avg('estimasi_harga'), 0) : null,
+                ],
+            ];
+        });
+
+        return [
+            'total_items' => $totalItems,
+            'total_bidders' => $totalBidders,
+            'item_progress' => $itemProgress,
+        ];
     }
 
     // Helper — invalidate semua cache terkait bounty

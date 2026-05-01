@@ -10,19 +10,46 @@ use App\Http\Requests\Bounty\UpdateBountyStatusRequest;
 use App\Models\Bounty;
 use App\Services\BountyService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class BountyController extends Controller
 {
     public function __construct(private BountyService $bountyService) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $bounties = Cache::remember('bounties.admin.all', 300, function () {
-            return Bounty::with(['items', 'createdBy'])
-                ->latest()
-                ->paginate(15)
-                ->toArray();
+        $request->validate([
+            'status'   => ['nullable', 'in:draft,published,closed,cancelled'],
+            'has_bids' => ['nullable', 'in:0,1,true,false'],
+        ]);
+
+        $cacheKey = 'bounties.admin.all.' . md5(json_encode($request->only([
+            'status', 'has_bids', 'page'
+        ])));
+
+        $bounties = Cache::remember($cacheKey, 300, function () use ($request) {
+            $query = Bounty::with(['items', 'createdBy'])
+                ->withCount([
+                    'bids as total_bids' => fn($q) => $q->whereIn('status', ['submitted', 'revised'])
+                ]);
+
+            // Filter by status
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            // Filter bounty yang sudah ada bid atau belum
+            if ($request->filled('has_bids')) {
+                $hasBids = filter_var($request->has_bids, FILTER_VALIDATE_BOOLEAN);
+                if ($hasBids) {
+                    $query->has('bids');
+                } else {
+                    $query->doesntHave('bids');
+                }
+            }
+
+            return $query->latest()->paginate(15)->toArray();
         });
 
         return response()->json($bounties);
@@ -35,7 +62,6 @@ class BountyController extends Controller
             $request->user()
         );
 
-        // Invalidate admin list cache
         Cache::forget('bounties.admin.all');
 
         return response()->json([
@@ -50,6 +76,10 @@ class BountyController extends Controller
             return $bounty->load(['items', 'createdBy', 'updatedBy'])->toArray();
         });
 
+        // Bidding progress — tidak di-cache karena berubah sering
+        $bounty->loadMissing('items', 'bids.items');
+        $data['bidding_progress'] = $this->bountyService->getBiddingProgress($bounty);
+
         return response()->json(['data' => $data]);
     }
 
@@ -61,7 +91,6 @@ class BountyController extends Controller
             $request->user()
         );
 
-        // Invalidate cache
         Cache::forget('bounties.admin.all');
         Cache::forget("bounties.admin.{$bounty->id}");
 
@@ -79,7 +108,6 @@ class BountyController extends Controller
             $request->user()
         );
 
-        // Invalidate semua cache terkait
         Cache::forget('bounties.admin.all');
         Cache::forget("bounties.admin.{$bounty->id}");
 
@@ -98,7 +126,6 @@ class BountyController extends Controller
                 $request->user()
             );
 
-            // Invalidate cache
             Cache::forget('bounties.admin.all');
             Cache::forget("bounties.admin.{$bounty->id}");
 
