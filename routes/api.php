@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\SupplierRegistrationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Admin\BountyController as AdminBountyController;
 use App\Http\Controllers\Api\Supplier\BountyController as SupplierBountyController;
+use App\Http\Controllers\Api\Supplier\BountyBidController as SupplierBountyBidController;
+use App\Http\Controllers\Api\Admin\BountyBidController as AdminBountyBidController;
 
 // Auth routes
 Route::prefix('auth')->group(function () {
@@ -45,6 +47,9 @@ Route::prefix('admin')
         Route::put('/bounties/{bounty}', [AdminBountyController::class, 'update']);
         Route::patch('/bounties/{bounty}/status', [AdminBountyController::class, 'updateStatus']);
         Route::patch('/bounties/{bounty}/extend-deadline', [AdminBountyController::class, 'extendDeadline']);
+
+        Route::get('/bounties/{bounty}/bids', [AdminBountyBidController::class, 'index']);
+        Route::get('/bounties/{bounty}/bids/{bountyBid}', [AdminBountyBidController::class, 'show']);
     });
 
 Route::prefix('supplier')
@@ -52,4 +57,8 @@ Route::prefix('supplier')
     ->group(function () {
         Route::get('/bounties', [SupplierBountyController::class, 'index']);
         Route::get('/bounties/{bounty}', [SupplierBountyController::class, 'show']);
+
+        Route::post('/bounties/{bounty}/bid', [SupplierBountyBidController::class, 'submitOrRevise']);
+        Route::get('/bounties/{bounty}/bid', [SupplierBountyBidController::class, 'myBid']);
+        Route::delete('/bounties/{bounty}/bid', [SupplierBountyBidController::class, 'withdraw']);
     });
