@@ -111,4 +111,30 @@ class BountyBidController extends Controller
             );
         }
     }
+
+    // List semua bid aktif milik supplier
+    public function myBids(Request $request): JsonResponse
+    {
+        $supplierProfile = $request->user()->supplierProfile;
+
+        if (!$supplierProfile) {
+            return response()->json(
+                [
+                    'message' => 'Supplier profile tidak ditemukan.',
+                ],
+                403,
+            );
+        }
+
+        $bids = BountyBid::with(['bounty.items', 'items.bountyItem'])
+            ->where('supplier_profile_id', $supplierProfile->id)
+            ->whereIn('status', ['submitted', 'revised'])
+            ->latest()
+            ->paginate(15);
+
+        return response()->json([
+            'message' => 'Daftar bid aktif kamu.',
+            'data' => $bids,
+        ]);
+    }
 }

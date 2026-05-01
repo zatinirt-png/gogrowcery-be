@@ -58,6 +58,7 @@ Route::prefix('supplier')
         Route::get('/bounties', [SupplierBountyController::class, 'index']);
         Route::get('/bounties/{bounty}', [SupplierBountyController::class, 'show']);
 
+        Route::get('/bids', [SupplierBountyBidController::class, 'myBids']);
         Route::post('/bounties/{bounty}/bid', [SupplierBountyBidController::class, 'submitOrRevise']);
         Route::get('/bounties/{bounty}/bid', [SupplierBountyBidController::class, 'myBid']);
         Route::delete('/bounties/{bounty}/bid', [SupplierBountyBidController::class, 'withdraw']);

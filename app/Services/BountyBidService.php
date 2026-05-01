@@ -32,28 +32,29 @@ class BountyBidService
         }
 
         return DB::transaction(function () use ($bounty, $supplierProfile, $data) {
-            // Cek apakah sudah pernah bid
-            $existingBid = BountyBid::where('bounty_id', $bounty->id)
-                ->where('supplier_profile_id', $supplierProfile->id)
-                ->whereNotIn('status', ['withdrawn'])
-                ->first();
+            // Cek semua bid — termasuk withdrawn
+            $existingBid = BountyBid::where('bounty_id', $bounty->id)->where('supplier_profile_id', $supplierProfile->id)->first();
 
             if ($existingBid) {
-                // Revisi bid yang sudah ada
+                // Apapun statusnya (submitted, revised, withdrawn) — update saja
                 $existingBid->update([
-                    'status' => 'revised',
+                    'status' => $existingBid->isWithdrawn() ? 'submitted' : 'revised',
                     'notes' => $data['notes'] ?? $existingBid->notes,
-                    'revised_at' => now(),
+                    'submitted_at' => $existingBid->isWithdrawn() ? now() : $existingBid->submitted_at,
+                    'revised_at' => $existingBid->isWithdrawn() ? null : now(),
+                    'withdrawn_at' => null, // reset withdrawn
                 ]);
 
-                // Sync items — hapus lama, buat baru
+                // Sync items
                 $existingBid->items()->delete();
                 $existingBid->items()->createMany($data['items']);
+
+                Cache::forget("bounty.{$bounty->id}.bids");
 
                 return $existingBid->load('items.bountyItem');
             }
 
-            // Buat bid baru
+            // Buat bid baru (pertama kali)
             $bid = BountyBid::create([
                 'bounty_id' => $bounty->id,
                 'supplier_profile_id' => $supplierProfile->id,
