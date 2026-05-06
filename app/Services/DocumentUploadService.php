@@ -30,10 +30,15 @@ class DocumentUploadService
     private function upload(UploadedFile $file, string $folder): string
     {
         $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-        $path     = "{$folder}/{$filename}";
+        $path = "{$folder}/{$filename}";
 
         Storage::disk($this->disk)->put($path, file_get_contents($file), 'private');
 
         return $path;
+    }
+
+    public function uploadProofPhoto(UploadedFile $file, int $bidItemId): string
+    {
+        return $this->upload($file, "bid-proofs/{$bidItemId}");
     }
 }

@@ -20,19 +20,16 @@ class BountyController extends Controller
     public function index(Request $request): JsonResponse
     {
         $request->validate([
-            'status'   => ['nullable', 'in:draft,published,closed,cancelled'],
+            'status' => ['nullable', 'in:draft,published,closed,cancelled'],
             'has_bids' => ['nullable', 'in:0,1,true,false'],
         ]);
 
-        $cacheKey = 'bounties.admin.all.' . md5(json_encode($request->only([
-            'status', 'has_bids', 'page'
-        ])));
+        $cacheKey = 'bounties.admin.all.' . md5(json_encode($request->only(['status', 'has_bids', 'page'])));
 
         $bounties = Cache::remember($cacheKey, 300, function () use ($request) {
-            $query = Bounty::with(['items', 'createdBy'])
-                ->withCount([
-                    'bids as total_bids' => fn($q) => $q->whereIn('status', ['submitted', 'revised'])
-                ]);
+            $query = Bounty::with(['items', 'createdBy'])->withCount([
+                'bids as total_bids' => fn($q) => $q->whereIn('status', ['submitted', 'revised']),
+            ]);
 
             // Filter by status
             if ($request->filled('status')) {
@@ -57,87 +54,92 @@ class BountyController extends Controller
 
     public function store(StoreBountyRequest $request): JsonResponse
     {
-        $bounty = $this->bountyService->create(
-            $request->validated(),
-            $request->user()
-        );
+        $bounty = $this->bountyService->create($request->validated(), $request->user());
 
         Cache::forget('bounties.admin.all');
 
-        return response()->json([
-            'message' => 'Bounty berhasil dibuat.',
-            'data'    => $bounty,
-        ], 201);
+        return response()->json(
+            [
+                'message' => 'Bounty berhasil dibuat.',
+                'data' => $bounty,
+            ],
+            201,
+        );
     }
 
     public function show(Bounty $bounty): JsonResponse
     {
+        // Data bounty + items + creator
         $data = Cache::remember("bounties.admin.{$bounty->id}", 300, function () use ($bounty) {
             return $bounty->load(['items', 'createdBy', 'updatedBy'])->toArray();
         });
 
-        // Bidding progress — tidak di-cache karena berubah sering
+        // Bidding progress — tidak di-cache
         $bounty->loadMissing('items', 'bids.items');
         $data['bidding_progress'] = $this->bountyService->getBiddingProgress($bounty);
+
+        // Semua bid lengkap dengan user detail — tidak di-cache
+        $bids = \App\Models\BountyBid::with([
+            'items.bountyItem',
+            'items.approval.approvedBy',
+            'supplierProfile.user', // ← user detail
+            'supplierProfile.lands',
+        ])
+            ->where('bounty_id', $bounty->id)
+            ->whereIn('status', ['submitted', 'revised'])
+            ->latest()
+            ->get();
+
+        $data['bids'] = $bids;
 
         return response()->json(['data' => $data]);
     }
 
     public function update(UpdateBountyRequest $request, Bounty $bounty): JsonResponse
     {
-        $bounty = $this->bountyService->update(
-            $bounty,
-            $request->validated(),
-            $request->user()
-        );
+        $bounty = $this->bountyService->update($bounty, $request->validated(), $request->user());
 
         Cache::forget('bounties.admin.all');
         Cache::forget("bounties.admin.{$bounty->id}");
 
         return response()->json([
             'message' => 'Bounty berhasil diupdate.',
-            'data'    => $bounty,
+            'data' => $bounty,
         ]);
     }
 
     public function updateStatus(UpdateBountyStatusRequest $request, Bounty $bounty): JsonResponse
     {
-        $bounty = $this->bountyService->updateStatus(
-            $bounty,
-            $request->status,
-            $request->user()
-        );
+        $bounty = $this->bountyService->updateStatus($bounty, $request->status, $request->user());
 
         Cache::forget('bounties.admin.all');
         Cache::forget("bounties.admin.{$bounty->id}");
 
         return response()->json([
             'message' => 'Status bounty berhasil diupdate.',
-            'data'    => $bounty,
+            'data' => $bounty,
         ]);
     }
 
     public function extendDeadline(ExtendBountyDeadlineRequest $request, Bounty $bounty): JsonResponse
     {
         try {
-            $bounty = $this->bountyService->extendDeadline(
-                $bounty,
-                $request->new_deadline,
-                $request->user()
-            );
+            $bounty = $this->bountyService->extendDeadline($bounty, $request->new_deadline, $request->user());
 
             Cache::forget('bounties.admin.all');
             Cache::forget("bounties.admin.{$bounty->id}");
 
             return response()->json([
                 'message' => 'Deadline bounty berhasil diperpanjang.',
-                'data'    => $bounty,
+                'data' => $bounty,
             ]);
-
         } catch (\InvalidArgumentException $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-            ], 422);
+            return response()->json(
+                [
+                    'message' => $e->getMessage(),
+                ],
+                422,
+            );
         }
     }
 }

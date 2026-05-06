@@ -1,14 +1,15 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\BountyBidController as AdminBountyBidController;
+use App\Http\Controllers\Api\Admin\BountyBidItemApprovalController;
+use App\Http\Controllers\Api\Admin\BountyController as AdminBountyController;
 use App\Http\Controllers\Api\Admin\SupplierApprovalController;
 use App\Http\Controllers\Api\Admin\SupplierCreateController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Supplier\BountyBidController as SupplierBountyBidController;
+use App\Http\Controllers\Api\Supplier\BountyController as SupplierBountyController;
 use App\Http\Controllers\Api\SupplierRegistrationController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Admin\BountyController as AdminBountyController;
-use App\Http\Controllers\Api\Supplier\BountyController as SupplierBountyController;
-use App\Http\Controllers\Api\Supplier\BountyBidController as SupplierBountyBidController;
-use App\Http\Controllers\Api\Admin\BountyBidController as AdminBountyBidController;
 
 // Auth routes
 Route::prefix('auth')->group(function () {
@@ -50,6 +51,19 @@ Route::prefix('admin')
 
         Route::get('/bounties/{bounty}/bids', [AdminBountyBidController::class, 'index']);
         Route::get('/bounties/{bounty}/bids/{bountyBid}', [AdminBountyBidController::class, 'show']);
+
+         Route::post(
+            '/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}/approve',
+            [BountyBidItemApprovalController::class, 'approve']
+        );
+        Route::get(
+            '/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}',
+            [BountyBidItemApprovalController::class, 'show']
+        );
+        Route::get(
+            '/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}/proof',
+            [BountyBidItemApprovalController::class, 'downloadProof']
+        );
     });
 
 Route::prefix('supplier')

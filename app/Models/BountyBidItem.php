@@ -32,4 +32,9 @@ class BountyBidItem extends Model
     {
         return $this->belongsTo(BountyItem::class);
     }
+
+    public function approval()
+{
+    return $this->hasOne(BountyBidItemApproval::class);
+}
 }
