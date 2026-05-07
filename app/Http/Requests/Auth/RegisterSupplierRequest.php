@@ -33,7 +33,7 @@ class RegisterSupplierRequest extends FormRequest
             'kecamatan' => ['required', 'string', 'max:100'],
             'kabupaten' => ['required', 'string', 'max:100'],
             'kontak_darurat' => ['nullable', 'string', 'max:255'],
-            'ktp_document' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'ktp_document' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
             'npwp_document' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
 
             // Lands — minimal 1

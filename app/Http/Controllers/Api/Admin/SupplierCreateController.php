@@ -45,8 +45,6 @@ class SupplierCreateController extends Controller
                 'tempat_lahir'        => $request->tempat_lahir,
                 'tanggal_lahir'       => $request->tanggal_lahir,
                 'jenis_kelamin'       => $request->jenis_kelamin,
-                'pendidikan'          => $request->pendidikan,
-                'status_perkawinan'   => $request->status_perkawinan,
                 'no_hp'               => $request->no_hp,
                 'email'               => $request->email,
                 'alamat_domisili'     => $request->alamat_domisili,
@@ -54,15 +52,13 @@ class SupplierCreateController extends Controller
                 'kecamatan'           => $request->kecamatan,
                 'kabupaten'           => $request->kabupaten,
                 'kontak_darurat'      => $request->kontak_darurat,
-                'bahasa_komunikasi'   => $request->bahasa_komunikasi ?? [],
-                'approval_status'     => 'pending',
-                'survey_status'       => 'belum_survey',
+                'approval_status'     => 'approved',
+                'survey_status'       => 'sudah_survey',
                 'registered_by_admin' => true, // ← bedanya di sini
             ]);
 
             // 3. Buat lands
             $landsData = collect($request->lands)->map(fn($land) => [
-                'nama_lahan'                     => $land['nama_lahan'],
                 'nama_pemilik'                   => $land['nama_pemilik'],
                 'no_hp'                          => $land['no_hp'],
                 'alamat_lahan'                   => $land['alamat_lahan'],
