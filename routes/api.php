@@ -32,14 +32,12 @@ Route::prefix('admin')
     ->group(function () {
         // Supplier create by admin
         Route::post('/suppliers', [SupplierCreateController::class, 'store']);
-
         // Supplier approval
-        Route::get('/suppliers', [SupplierApprovalController::class, 'all']);
-        Route::get('/suppliers/pending', [SupplierApprovalController::class, 'index']);
+        Route::get('/suppliers', [SupplierApprovalController::class, 'index']);
         Route::get('/suppliers/{supplierProfile}', [SupplierApprovalController::class, 'show']);
+        Route::post('/suppliers/{supplierProfile}/approval', [SupplierApprovalController::class, 'approveOrReject']);
         Route::get('/suppliers/{supplierProfile}/documents/{type}', [SupplierApprovalController::class, 'downloadDocument'])->name('admin.suppliers.documents');
-        Route::patch('/suppliers/{supplierProfile}/approve', [SupplierApprovalController::class, 'approve']);
-        Route::patch('/suppliers/{supplierProfile}/reject', [SupplierApprovalController::class, 'reject']);
+        Route::get('/suppliers/{supplierProfile}/photos/{type}', [SupplierApprovalController::class, 'downloadPhoto']);
 
         // Bounty
         Route::get('/bounties', [AdminBountyController::class, 'index']);
@@ -52,18 +50,9 @@ Route::prefix('admin')
         Route::get('/bounties/{bounty}/bids', [AdminBountyBidController::class, 'index']);
         Route::get('/bounties/{bounty}/bids/{bountyBid}', [AdminBountyBidController::class, 'show']);
 
-         Route::post(
-            '/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}/approve',
-            [BountyBidItemApprovalController::class, 'approve']
-        );
-        Route::get(
-            '/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}',
-            [BountyBidItemApprovalController::class, 'show']
-        );
-        Route::get(
-            '/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}/proof',
-            [BountyBidItemApprovalController::class, 'downloadProof']
-        );
+        Route::post('/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}/approve', [BountyBidItemApprovalController::class, 'approve']);
+        Route::get('/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}', [BountyBidItemApprovalController::class, 'show']);
+        Route::get('/bounties/{bounty}/bids/{bountyBid}/items/{bountyBidItem}/proof', [BountyBidItemApprovalController::class, 'downloadProof']);
     });
 
 Route::prefix('supplier')

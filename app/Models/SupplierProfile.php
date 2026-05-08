@@ -25,6 +25,11 @@ class SupplierProfile extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function photos()
+{
+    return $this->hasOne(SupplierProfilePhoto::class);
+}
+
     public function approvedBy()
     {
         return $this->belongsTo(User::class, 'approved_by');

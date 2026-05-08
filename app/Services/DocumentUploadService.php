@@ -41,4 +41,10 @@ class DocumentUploadService
     {
         return $this->upload($file, "bid-proofs/{$bidItemId}");
     }
+
+    public function uploadSupplierPhoto(UploadedFile $file, int $supplierProfileId, string $type): string
+    {
+        // type: kebun, akses_jalan, pic
+        return $this->upload($file, "suppliers/photos/{$supplierProfileId}/{$type}");
+    }
 }
